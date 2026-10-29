@@ -1,0 +1,33 @@
+# Redraws the two activity images from your public contributions once a day.
+# No token or secrets needed: it reads the same calendar your profile shows.
+name: Refresh activity
+
+on:
+  schedule:
+    - cron: "23 21 * * *" # every day, ~23:23 Gaza time
+  workflow_dispatch: # "Run workflow" button in the Actions tab
+  push:
+    branches: [main]
+    paths-ignore:
+      - "assets/activity-*.svg"
+
+permissions:
+  contents: write # lets the job commit the new SVG back to this repo
+
+jobs:
+  activity:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Draw the last 12 weeks
+        run: python3 scripts/update_activity.py
+
+      - name: Commit if it changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/activity-graph.svg assets/activity-stats.svg
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: refresh activity [skip ci]"
+          git push
